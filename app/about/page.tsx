@@ -1,3 +1,5 @@
+"use client"
+
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import Link from "next/link"
@@ -5,6 +7,20 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Award, Users, Clock, Shield, Target, Eye, Heart, Linkedin, Facebook } from "lucide-react"
+import { useRef, useEffect, useState } from "react"
+
+function useInView(ref: React.RefObject<HTMLDivElement>) {
+  const [isIntersecting, setIntersecting] = useState(false)
+  useEffect(() => {
+    const observer = new window.IntersectionObserver(
+      ([entry]) => setIntersecting(entry.isIntersecting),
+      { threshold: 0.3 }
+    )
+    if (ref.current) observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [ref])
+  return isIntersecting
+}
 
 export default function AboutPage() {
   const stats = [
@@ -58,6 +74,9 @@ export default function AboutPage() {
       description: "Votre satisfaction est notre priorité absolue, avec un service personnalisé.",
     },
   ]
+
+  const statsRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
+  const statsInView = useInView(statsRef)
 
   return (
     <div className="min-h-screen">
@@ -134,7 +153,7 @@ export default function AboutPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-emh-gray">
+      <section className="py-20 bg-emh-gray" ref={statsRef}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-emh-black mb-6">
@@ -149,7 +168,7 @@ export default function AboutPage() {
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-emh-red rounded-full">
                     <stat.icon className="text-white" size={32} />
                   </div>
-                  <div className="text-3xl font-bold text-emh-black">{stat.value}</div>
+                  <AnimatedCount value={parseInt(stat.value)} inView={statsInView} />
                   <div className="text-sm text-gray-600">{stat.label}</div>
                 </CardContent>
               </Card>
@@ -294,4 +313,32 @@ export default function AboutPage() {
       <Footer />
     </div>
   )
+}
+
+function AnimatedCount({ value, inView }: { value: number; inView: boolean }) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!inView) {
+      setCount(0)
+      return
+    }
+    let start = 0
+    const end = value
+    if (start === end) return
+    let duration = 1200
+    let increment = end / (duration / 16)
+    let raf: number
+    function animate() {
+      start += increment
+      if (start < end) {
+        setCount(Math.floor(start))
+        raf = requestAnimationFrame(animate)
+      } else {
+        setCount(end)
+      }
+    }
+    animate()
+    return () => cancelAnimationFrame(raf)
+  }, [inView, value])
+  return <div className="text-3xl font-bold text-emh-black">{count}+</div>
 }
